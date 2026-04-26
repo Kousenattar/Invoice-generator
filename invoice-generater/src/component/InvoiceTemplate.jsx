@@ -38,7 +38,7 @@ const InvoiceTemplate = ({ invoiceData }) => {
 
   return (
     // Outer wrapper centers the A4 page on the screen and hides background when printing
-    <div className="min-h-screen bg-gray-200 p-2 sm:p-8 flex sm:justify-center overflow-x-auto print:bg-white print:p-0 print:block">
+    <div className="min-h-screen bg-gray-200 p-2 sm:p-8 flex sm:justify-center overflow-x-auto print:bg-white print:p-0 print:block print:overflow-visible print:w-fit">
       
       {/* A4 Page Container */}
       <div className="w-[210mm] shrink-0 bg-white border-2 border-black relative flex flex-col font-sans text-[10px] leading-tight text-black box-border">
