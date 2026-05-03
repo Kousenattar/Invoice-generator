@@ -1,8 +1,10 @@
 import React from 'react';
 
 const InvoiceTemplate = ({ invoiceData }) => {
+  console.log(invoiceData);
+
   // Dummy data if no props are passed
-  const data = invoiceData || {
+  const rawData = invoiceData || {
     customerName: "",
     address: "",
     gstin: "",
@@ -14,9 +16,10 @@ const InvoiceTemplate = ({ invoiceData }) => {
     dcDate: "",
     poNo: "",
     poDate: "23/04/2026",
+    hsn: "9402",
     items: [
-      { id: 1, hsn: "9402", desc: "ICU Bed (Motorized)", qty: 2, kgs: "-", rateKgs: "-", rateNos: "45000", amount: "90000" },
-      { id: 2, hsn: "9402", desc: "Overbed Table", qty: 5, kgs: "-", rateKgs: "-", rateNos: "2500", amount: "12500" },
+      { id: 1, desc: "ICU Bed (Motorized)", qty: 2, kgs: "-", rateKgs: "-", rateNos: "45000", amount: "90000" },
+      { id: 2, desc: "Overbed Table", qty: 5, kgs: "-", rateKgs: "-", rateNos: "2500", amount: "12500" },
     ],
     totals: {
       assessable: "102500",
@@ -30,6 +33,12 @@ const InvoiceTemplate = ({ invoiceData }) => {
       gst: "Eighteen Thousand Four Hundred Fifty Only",
       total: "One Lakh Twenty Thousand Nine Hundred Fifty Only"
     }
+  };
+
+  // Fallback for HSN if missing from root (old data compatibility)
+  const data = {
+    ...rawData,
+    hsn: rawData.hsn || (rawData.items && rawData.items.length > 0 ? rawData.items[0].hsn : '')
   };
 
   // We want to render empty rows to make it look like the physical bill book
@@ -115,7 +124,7 @@ const InvoiceTemplate = ({ invoiceData }) => {
             <thead className="border-b-2 border-black text-[9px] sm:text-[10px]">
               <tr>
                 <th rowSpan="2" className="border-r border-black font-semibold w-8">Sr.<br/>No.</th>
-                <th className="border-r border-b border-black font-semibold text-left px-1.5 py-0.5 w-[42%]">HSN Code :</th>
+                <th className="border-r border-b border-black font-semibold text-left px-1.5 py-0.5 w-[42%]">HSN Code : <span className="font-bold">{data?.hsn}</span></th>
                 <th rowSpan="2" className="border-r border-black font-semibold w-10">Qty.</th>
                 <th rowSpan="2" className="border-r border-black font-semibold w-10">Kgs.</th>
                 <th colSpan="2" className="border-r border-b border-black font-semibold w-28">Rate / Per</th>
@@ -133,7 +142,7 @@ const InvoiceTemplate = ({ invoiceData }) => {
                 <tr key={item.id || index} className="border-b border-gray-400">
                   <td className="border-r border-black py-0.5">{index + 1}</td>
                   <td className="border-r border-black px-1.5 py-0.5 text-left leading-tight">
-                    <div className="font-semibold text-[9px] text-gray-700">{item.hsn}</div>
+                    <div className="font-semibold text-[9px] text-gray-700"></div>
                     <div className="uppercase font-medium">{item.desc}</div>
                   </td>
                   <td className="border-r border-black py-0.5">{item.qty}</td>

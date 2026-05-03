@@ -26,7 +26,7 @@ const InvoiceForm = () => {
   const isEdit = Boolean(id);
 
   const [formData, setFormData] = useState({
-    invoiceNo: '', date: '', customerName: '', address: '', gstin: '', globalHsn: '',
+    invoiceNo: '', date: '', customerName: '', address: '', gstin: '', hsn: '',
     items: [{ desc: '', qty: 1, kgs: '', rateNos: 0, rateKgs: '', amount: 0 }],
     totals: { assessable: 0, cgst: 0, sgst: 0, taxAmount: 0, total: 0 },
     words: { assessable: '', gst: '', total: '' }
@@ -36,8 +36,9 @@ const InvoiceForm = () => {
     if (isEdit) {
       api.get(`/invoices/${id}`).then(res => {
         const data = res.data;
-        const globalHsn = data.items && data.items.length > 0 ? data.items[0].hsn : '';
-        setFormData({ ...data, globalHsn });
+        // Fallback for old data where hsn was inside items
+        const hsn = data.hsn || (data.items && data.items.length > 0 ? data.items[0].hsn : '');
+        setFormData({ ...data, hsn });
       });
     }
   }, [id, isEdit]);
@@ -99,10 +100,7 @@ const InvoiceForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
-        ...formData,
-        items: formData.items.map(item => ({ ...item, hsn: formData.globalHsn }))
-      };
+      const payload = { ...formData };
 
       if (isEdit) {
         await api.put(`/invoices/${id}`, payload);
@@ -134,7 +132,7 @@ const InvoiceForm = () => {
           <input type="text" placeholder="GSTIN" className="border p-2 rounded"
             value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value})} />
           <input type="text" placeholder="HSN Code (applies to all items)" className="border p-2 rounded"
-            value={formData.globalHsn} onChange={e => setFormData({...formData, globalHsn: e.target.value})} />
+            value={formData.hsn} onChange={e => setFormData({...formData, hsn: e.target.value})} />
         </div>
 
         {/* Dynamic Items */}

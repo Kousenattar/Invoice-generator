@@ -12,9 +12,10 @@ const invoiceSchema = new mongoose.Schema({
   dcDate: { type: String },
   poNo: { type: String },
   poDate: { type: String },
+  hsn: { type: String },
   
   items: [{
-    hsn: { type: String },
+    
     desc: { type: String, required: true },
     qty: { type: Number, required: true },
     kgs: { type: String },
