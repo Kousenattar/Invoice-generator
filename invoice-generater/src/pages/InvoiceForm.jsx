@@ -27,6 +27,7 @@ const InvoiceForm = () => {
 
   const [formData, setFormData] = useState({
     invoiceNo: '', date: '', customerName: '', address: '', gstin: '', hsn: '',
+    dcNo: [''], dcDate: [''], poNo: '', poDate: '',
     items: [{ desc: '', qty: 1, kgs: '', rateNos: 0, rateKgs: '', amount: 0 }],
     totals: { assessable: 0, cgst: 0, sgst: 0, taxAmount: 0, total: 0 },
     words: { assessable: '', gst: '', total: '' }
@@ -38,7 +39,10 @@ const InvoiceForm = () => {
         const data = res.data;
         // Fallback for old data where hsn was inside items
         const hsn = data.hsn || (data.items && data.items.length > 0 ? data.items[0].hsn : '');
-        setFormData({ ...data, hsn });
+        // Ensure dcNo and dcDate are arrays
+        const dcNo = Array.isArray(data.dcNo) ? data.dcNo : [data.dcNo || ''];
+        const dcDate = Array.isArray(data.dcDate) ? data.dcDate : [data.dcDate || ''];
+        setFormData({ ...data, hsn, dcNo, dcDate });
       });
     }
   }, [id, isEdit]);
@@ -110,7 +114,8 @@ const InvoiceForm = () => {
       navigate('/'); // Go back to dashboard on success
     } catch (error) {
       console.error("Error saving invoice", error);
-      alert("Failed to save invoice");
+      const errorMsg = error.response?.data?.error || error.message;
+      alert("Failed to save invoice: " + errorMsg);
     }
   };
 
@@ -133,6 +138,67 @@ const InvoiceForm = () => {
             value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value})} />
           <input type="text" placeholder="HSN Code (applies to all items)" className="border p-2 rounded"
             value={formData.hsn} onChange={e => setFormData({...formData, hsn: e.target.value})} />
+          <input type="text" placeholder="P.O. No" className="border p-2 rounded"
+            value={formData.poNo} onChange={e => setFormData({...formData, poNo: e.target.value})} />
+          <input type="date" className="border p-2 rounded"
+            value={formData.poDate} onChange={e => setFormData({...formData, poDate: e.target.value})} />
+        </div>
+
+        {/* DC Numbers and Dates */}
+        <div className="bg-blue-50 p-4 rounded-lg border">
+          <h3 className="font-semibold mb-3 border-b border-blue-200 pb-1 text-blue-800">Delivery Challan (D.C.) Details</h3>
+          {formData.dcNo.map((no, index) => (
+            <div key={index} className="flex gap-4 mb-3 items-end">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-600 mb-1">D.C. No</label>
+                <input 
+                  type="text" 
+                  placeholder="D.C. No" 
+                  className="border p-2 rounded w-full bg-white"
+                  value={no} 
+                  onChange={e => {
+                    const newDcNo = [...formData.dcNo];
+                    newDcNo[index] = e.target.value;
+                    setFormData({...formData, dcNo: newDcNo});
+                  }} 
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-600 mb-1">D.C. Date</label>
+                <input 
+                  type="date" 
+                  className="border p-2 rounded w-full bg-white"
+                  value={formData.dcDate[index] || ''} 
+                  onChange={e => {
+                    const newDcDate = [...formData.dcDate];
+                    newDcDate[index] = e.target.value;
+                    setFormData({...formData, dcDate: newDcDate});
+                  }} 
+                />
+              </div>
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (formData.dcNo.length > 1) {
+                    const newDcNo = formData.dcNo.filter((_, i) => i !== index);
+                    const newDcDate = formData.dcDate.filter((_, i) => i !== index);
+                    setFormData({...formData, dcNo: newDcNo, dcDate: newDcDate});
+                  }
+                }}
+                disabled={formData.dcNo.length === 1}
+                className="bg-red-100 text-red-600 px-3 py-2 rounded hover:bg-red-200 disabled:opacity-30 h-10"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button 
+            type="button" 
+            onClick={() => setFormData({...formData, dcNo: [...formData.dcNo, ''], dcDate: [...formData.dcDate, '']})}
+            className="text-blue-700 text-sm font-bold hover:underline"
+          >
+            + Add Another DC
+          </button>
         </div>
 
         {/* Dynamic Items */}

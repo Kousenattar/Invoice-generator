@@ -111,8 +111,8 @@ const InvoiceTemplate = ({ invoiceData }) => {
           <div className="grid grid-cols-2 text-[9px] sm:text-[10px]">
             <div className="border-r border-b border-black px-1.5 py-0.5"><span className="font-semibold">Invoice No. :</span> {data.invoiceNo}</div>
             <div className="border-b border-black px-1.5 py-0.5"><span className="font-semibold">Date :</span> {data.date}</div>
-            <div className="border-r border-b border-black px-1.5 py-0.5"><span className="font-semibold">D.C. No. :</span> {data.dcNo}</div>
-            <div className="border-b border-black px-1.5 py-0.5"><span className="font-semibold">Date :</span> {data.dcDate}</div>
+            <div className="border-r border-b border-black px-1.5 py-0.5"><span className="font-semibold">D.C. No. :</span> {Array.isArray(data.dcNo) ? data.dcNo.filter(n => n).join(', ') : data.dcNo}</div>
+            <div className="border-b border-black px-1.5 py-0.5"><span className="font-semibold">Date :</span> {Array.isArray(data.dcDate) ? data.dcDate.filter(d => d).join(', ') : data.dcDate}</div>
             <div className="border-r border-black px-1.5 py-0.5 flex items-end"><span className="font-semibold mr-1">P.O. No.:</span> {data.poNo}</div>
             <div className="px-1.5 py-0.5 flex items-end"><span className="font-semibold mr-1">Date :</span> {data.poDate}</div>
           </div>
