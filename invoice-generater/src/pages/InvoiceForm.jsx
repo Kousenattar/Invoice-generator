@@ -33,6 +33,39 @@ const InvoiceForm = () => {
     words: { assessable: '', gst: '', total: '' }
   });
 
+  const [previousInvoices, setPreviousInvoices] = useState([]);
+
+  useEffect(() => {
+    // Fetch all invoices to build suggestions for fast typing
+    api.get('/invoices')
+      .then(res => setPreviousInvoices(res.data))
+      .catch(err => console.error("Could not fetch invoices for suggestions", err));
+  }, []);
+
+  // Compute unique customers and products for datalists
+  const customerDetailsMap = previousInvoices.reduce((acc, inv) => {
+    if (inv.customerName && !acc[inv.customerName]) {
+      acc[inv.customerName] = { address: inv.address || '', gstin: inv.gstin || '' };
+    }
+    return acc;
+  }, {});
+  const uniqueCustomers = Object.keys(customerDetailsMap);
+
+  const productDetailsMap = previousInvoices.reduce((acc, inv) => {
+    if (inv.items) {
+      inv.items.forEach(item => {
+        if (item.desc && !acc[item.desc]) {
+          acc[item.desc] = { 
+            rateNos: item.rateNos || 0, 
+            rateKgs: item.rateKgs || ''
+          };
+        }
+      });
+    }
+    return acc;
+  }, {});
+  const uniqueProducts = Object.keys(productDetailsMap);
+
   useEffect(() => {
     if (isEdit) {
       api.get(`/invoices/${id}`).then(res => {
@@ -66,10 +99,12 @@ const InvoiceForm = () => {
 
   const calculateTotals = (items) => {
     const assessable = items.reduce((sum, item) => sum + Number(item.amount), 0);
-    const cgst = assessable * 0.09; // Assuming 9% CGST
-    const sgst = assessable * 0.09; // Assuming 9% SGST
-    const taxAmount = cgst + sgst;
-    const total = assessable + taxAmount;
+    const cgst = Number((assessable * 0.09).toFixed(2)); // Assuming 9% CGST
+    const sgst = Number((assessable * 0.09).toFixed(2)); // Assuming 9% SGST
+    const taxAmount = Number((cgst + sgst).toFixed(2));
+    
+    const rawTotal = assessable + taxAmount;
+    const total = Math.round(rawTotal); // Round figure feature
     
     setFormData(prev => ({
       ...prev,
@@ -125,13 +160,26 @@ const InvoiceForm = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         
         {/* Basic Details */}
+        <datalist id="customers-list">
+          {uniqueCustomers.map((c, i) => <option key={i} value={c} />)}
+        </datalist>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <input type="text" placeholder="Invoice No" required className="border p-2 rounded" 
             value={formData.invoiceNo} onChange={e => setFormData({...formData, invoiceNo: e.target.value})} />
           <input type="date" required className="border p-2 rounded"
             value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
-          <input type="text" placeholder="Customer Name" required className="border p-2 rounded"
-            value={formData.customerName} onChange={e => setFormData({...formData, customerName: e.target.value})} />
+          <input type="text" list="customers-list" placeholder="Customer Name" required className="border p-2 rounded"
+            value={formData.customerName} 
+            onChange={e => {
+              const val = e.target.value;
+              const autoFill = customerDetailsMap[val];
+              if (autoFill) {
+                setFormData({...formData, customerName: val, address: autoFill.address, gstin: autoFill.gstin});
+              } else {
+                setFormData({...formData, customerName: val});
+              }
+            }} 
+          />
           <input type="text" placeholder="Address" className="border p-2 rounded"
             value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
           <input type="text" placeholder="GSTIN" className="border p-2 rounded"
@@ -217,9 +265,38 @@ const InvoiceForm = () => {
               <div className="w-8"></div> {/* Delete column */}
             </div>
 
+            <datalist id="products-list">
+              {uniqueProducts.map((p, i) => <option key={i} value={p} />)}
+            </datalist>
+
             {formData.items.map((item, index) => (
               <div key={index} className="flex gap-2 mb-2 items-center">
-                <input type="text" placeholder="Description" required className="border p-2 flex-1 bg-white" value={item.desc} onChange={e => handleItemChange(index, 'desc', e.target.value)} />
+                <input type="text" list="products-list" placeholder="Description" required className="border p-2 flex-1 bg-white" 
+                  value={item.desc} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    const autoFill = productDetailsMap[val];
+                    if (autoFill) {
+                      const newItems = [...formData.items];
+                      newItems[index] = {
+                        ...newItems[index],
+                        desc: val,
+                        rateNos: autoFill.rateNos,
+                        rateKgs: autoFill.rateKgs,
+                      };
+                      const qty = Number(newItems[index].qty) || 0;
+                      const rateNos = Number(autoFill.rateNos) || 0;
+                      const kgs = Number(newItems[index].kgs) || 0;
+                      const rateKgs = Number(autoFill.rateKgs) || 0;
+                      newItems[index].amount = (qty * rateNos) + (kgs * rateKgs);
+
+                      setFormData({ ...formData, items: newItems });
+                      calculateTotals(newItems);
+                    } else {
+                      handleItemChange(index, 'desc', val);
+                    }
+                  }} 
+                />
                 <input type="number" placeholder="Qty" className="border p-2 w-16 bg-white" value={item.qty} onChange={e => handleItemChange(index, 'qty', e.target.value)} />
                 <input type="number" placeholder="Kgs" className="border p-2 w-16 bg-white" value={item.kgs} onChange={e => handleItemChange(index, 'kgs', e.target.value)} />
                 <input type="number" placeholder="Rate/Nos" className="border p-2 w-24 bg-white" value={item.rateNos} onChange={e => handleItemChange(index, 'rateNos', e.target.value)} />
