@@ -19,6 +19,53 @@ const numberToWords = (num) => {
   return convert(Math.round(num)) + " Only";
 };
 
+const AutocompleteInput = ({ value, onChange, options, placeholder, className, required }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [filteredOptions, setFilteredOptions] = useState(options);
+
+  useEffect(() => {
+    if (value) {
+      setFilteredOptions(options.filter(opt => opt.toLowerCase().includes(value.toLowerCase())));
+    } else {
+      setFilteredOptions(options);
+    }
+  }, [value, options]);
+
+  return (
+    <div className="relative flex-1">
+      <input
+        type="text"
+        placeholder={placeholder}
+        required={required}
+        className={className}
+        value={value}
+        onChange={e => {
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+      />
+      {isOpen && filteredOptions.length > 0 && (
+        <ul className="absolute z-50 w-full bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto mt-1 text-left">
+          {filteredOptions.map((opt, i) => (
+            <li
+              key={i}
+              className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm"
+              onMouseDown={(e) => {
+                e.preventDefault(); 
+                onChange(opt);
+                setIsOpen(false);
+              }}
+            >
+              {opt}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 const InvoiceForm = () => {
   const { id } = useParams();
@@ -160,25 +207,25 @@ const InvoiceForm = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         
         {/* Basic Details */}
-        <datalist id="customers-list">
-          {uniqueCustomers.map((c, i) => <option key={i} value={c} />)}
-        </datalist>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <input type="text" placeholder="Invoice No" required className="border p-2 rounded" 
             value={formData.invoiceNo} onChange={e => setFormData({...formData, invoiceNo: e.target.value})} />
           <input type="date" required className="border p-2 rounded"
             value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
-          <input type="text" list="customers-list" placeholder="Customer Name" required className="border p-2 rounded"
+          <AutocompleteInput 
+            placeholder="Customer Name" 
+            required 
+            className="border p-2 rounded w-full"
+            options={uniqueCustomers}
             value={formData.customerName} 
-            onChange={e => {
-              const val = e.target.value;
+            onChange={val => {
               const autoFill = customerDetailsMap[val];
               if (autoFill) {
                 setFormData({...formData, customerName: val, address: autoFill.address, gstin: autoFill.gstin});
               } else {
                 setFormData({...formData, customerName: val});
               }
-            }} 
+            }}
           />
           <input type="text" placeholder="Address" className="border p-2 rounded"
             value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
@@ -265,16 +312,15 @@ const InvoiceForm = () => {
               <div className="w-8"></div> {/* Delete column */}
             </div>
 
-            <datalist id="products-list">
-              {uniqueProducts.map((p, i) => <option key={i} value={p} />)}
-            </datalist>
-
             {formData.items.map((item, index) => (
               <div key={index} className="flex gap-2 mb-2 items-center">
-                <input type="text" list="products-list" placeholder="Description" required className="border p-2 flex-1 bg-white" 
+                <AutocompleteInput 
+                  placeholder="Description" 
+                  required 
+                  className="border p-2 w-full bg-white"
+                  options={uniqueProducts}
                   value={item.desc} 
-                  onChange={e => {
-                    const val = e.target.value;
+                  onChange={val => {
                     const autoFill = productDetailsMap[val];
                     if (autoFill) {
                       const newItems = [...formData.items];
