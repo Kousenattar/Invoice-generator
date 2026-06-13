@@ -81,13 +81,28 @@ const InvoiceForm = () => {
   });
 
   const [previousInvoices, setPreviousInvoices] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Fetch all invoices to build suggestions for fast typing
     api.get('/invoices')
-      .then(res => setPreviousInvoices(res.data))
+      .then(res => {
+        setPreviousInvoices(res.data);
+        if (!isEdit && res.data && res.data.length > 0) {
+          const validNumbers = res.data
+            .map(inv => parseInt(inv.invoiceNo, 10))
+            .filter(num => !isNaN(num));
+          if (validNumbers.length > 0) {
+            const maxInvoiceNo = Math.max(...validNumbers);
+            setFormData(prev => ({
+              ...prev,
+              invoiceNo: prev.invoiceNo || String(maxInvoiceNo + 1)
+            }));
+          }
+        }
+      })
       .catch(err => console.error("Could not fetch invoices for suggestions", err));
-  }, []);
+  }, [isEdit]);
 
   // Compute unique customers and products for datalists
   const customerDetailsMap = previousInvoices.reduce((acc, inv) => {
@@ -185,6 +200,8 @@ const InvoiceForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const payload = { ...formData };
 
@@ -198,6 +215,7 @@ const InvoiceForm = () => {
       console.error("Error saving invoice", error);
       const errorMsg = error.response?.data?.error || error.message;
       alert("Failed to save invoice: " + errorMsg);
+      setIsSubmitting(false);
     }
   };
 
@@ -371,8 +389,8 @@ const InvoiceForm = () => {
           <p className="text-xl font-bold mt-2 border-t pt-2">Total: ₹ {formData.totals.total}</p>
         </div>
 
-        <button type="submit" className="w-full bg-green-600 text-white p-3 rounded font-bold hover:bg-green-700">
-          {isEdit ? 'Update Invoice' : 'Save Invoice'}
+        <button type="submit" disabled={isSubmitting} className="w-full bg-green-600 text-white p-3 rounded font-bold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+          {isSubmitting ? 'Saving...' : (isEdit ? 'Update Invoice' : 'Save Invoice')}
         </button>
       </form>
     </div>
